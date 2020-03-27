@@ -1,8 +1,6 @@
 import pandas as pd
 import requests
 
-
-
 def api_data_extractor(start_date,end_date,token, field="all",postcode="all"):
 
     date_range = pd.date_range(start=start_date, end=end_date, freq='D')
@@ -12,7 +10,7 @@ def api_data_extractor(start_date,end_date,token, field="all",postcode="all"):
     df_load_all = pd.DataFrame()
 
     for date in date_range.values.astype('<M8[D]').astype(str):
-        response = requests.get("https://pv-map.apvi.org.au/api/v1/2-digit/{}.json?access_token={}".format(date, token))
+        response = requests.get("https://pv-map.apvi.org.au/api/v2/2-digit/{}.json?access_token={}".format(date, token))
         print(date + " started")
 
         data = response.json()
@@ -24,7 +22,7 @@ def api_data_extractor(start_date,end_date,token, field="all",postcode="all"):
             df_cap.columns = ['Postcode', 'Capacity_MW', 'Date']
             df_cap = df_cap[['Date', 'Postcode', 'Capacity_MW']]
             if postcode != "all":
-                df_cap = df_cap[df_cap['Postcode'] == postcode].copy()
+                df_cap = df_cap[df_cap['Postcode'].str.startswith(str(postcode))].copy()
             df_cap_all = df_cap_all.append(df_cap)
 
         if field == "all" or field == "performance":
@@ -33,7 +31,7 @@ def api_data_extractor(start_date,end_date,token, field="all",postcode="all"):
             df_per = pd.melt(df_per, id_vars=['index'])
             df_per.columns = ['Postcode', 'Timestamp', 'Performance']
             if postcode != "all":
-                df_per = df_per[df_per['Postcode'] == postcode].copy()
+                df_per = df_per[df_per['Postcode'].str.startswith(str(postcode))].copy()
             df_per_all = df_per_all.append(df_per)
 
         if field == "all" or field == "output":
@@ -42,7 +40,7 @@ def api_data_extractor(start_date,end_date,token, field="all",postcode="all"):
             df_out = pd.melt(df_out, id_vars=['index'])
             df_out.columns = ['Postcode', 'Timestamp', 'Output']
             if postcode != "all":
-                df_out = df_out[df_out['Postcode'] == postcode].copy()
+                df_out = df_out[df_out['Postcode'].str.startswith(str(postcode))].copy()
             df_out_all = df_out_all.append(df_out)
 
         if field == "all" or field == "load":
@@ -52,20 +50,4 @@ def api_data_extractor(start_date,end_date,token, field="all",postcode="all"):
             df_load_all = df_load_all.append(df_load)
     return [df_load_all, df_out_all, df_cap_all, df_per_all]
 
-# example:
-token = ""
-start_date = "2019-01-01"
-end_date = "2019-01-02"
-[df_load_all, df_out_all, df_cap_all, df_per_all] = api_data_extractor(start_date, end_date, token)
 
-# for specific field performance, capacity, load or output
-[df_load_all, df_out_all, df_cap_all, df_per_all] = api_data_extractor(start_date, end_date, token, field="performance")
-
-# for specific postcode add the postcode in text, for example: "31"
-[df_load_all, df_out_all, df_cap_all, df_per_all] = api_data_extractor(start_date, end_date, token, field="performance", postcode="31")
-
-# Writing data in csv file:
-df_per_all.to_csv("PerformanceData.csv", index=False)
-df_out_all.to_csv("OutputData.csv", index=False)
-df_cap_all.to_csv("CapacityData.csv", index=False)
-df_load_all.to_csv("LoadData.csv", index=False)
